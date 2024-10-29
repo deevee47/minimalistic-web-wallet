@@ -10,6 +10,8 @@ import { derivePath } from "ed25519-hd-key";
 import { Keypair } from "@solana/web3.js";
 import nacl from "tweetnacl"
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 const MnemonicGenerator = () => {
     const [mnemonics, setMnemonics] = useState(" ");
@@ -50,7 +52,7 @@ const MnemonicGenerator = () => {
                     {mnemonics.split(" ").map((word, index) => (
                         <p
                             key={index}
-                            className="p-3 bg-gray-800 border-2 border-gray-700 hover:bg-gray-700 text-center rounded text-sm font-medium text-gray-200"
+                            className="px-2 py-3 bg-gray-800 border-2 border-gray-700 hover:bg-gray-700 text-center rounded text-sm font-medium text-gray-200"
                         >
                             {word}
                         </p>
@@ -60,8 +62,18 @@ const MnemonicGenerator = () => {
                     </div>
                 </div>
             )}
-            <EthWallet mnemonics={mnemonics} />
-            <SolanaWallet mnemonics={mnemonics} />
+            <Tabs defaultValue="solana" className="">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="solana">Solana</TabsTrigger>
+                    <TabsTrigger value="eth">Ethereum</TabsTrigger>
+                </TabsList>
+                <TabsContent value="solana">
+                <SolanaWallet mnemonics={mnemonics} />
+                </TabsContent>
+                <TabsContent value="eth">
+                     <EthWallet mnemonics={mnemonics} />
+                </TabsContent>
+            </Tabs>
         </div>
     );
 };
@@ -86,21 +98,23 @@ export function SolanaWallet({ mnemonics }: { mnemonics: string }) {
         );
     };
 
+    const addWallet = () => {
+        const seed = mnemonicToSeed(mnemonics);
+        const path = `m/44'/501'/${currentIndex}'/0'`;
+        const derivedSeed = derivePath(path, seed.toString()).key;
+        const secret = nacl.sign.keyPair.fromSeed(derivedSeed).secretKey;
+        const keypair = Keypair.fromSecretKey(secret);
+        setCurrentIndex(currentIndex + 1);
+        let privateKeyEncoded = encodeBase58(secret);
+        let publicKeyEncoded = keypair.publicKey.toBase58();
+        setAddresses((prev) => [
+            ...prev, { publicKey: publicKeyEncoded, privateKey: privateKeyEncoded, visible: false }])
+    }
+
     return <div>
         <button
             className="mb-4 px-4 py-2 text-base font-medium bg-gray-700 border-2 border-transparent hover:bg-gray-800 hover:border-gray-700 text-white rounded-md transition-all duration-200"
-            onClick={function () {
-            const seed = mnemonicToSeed(mnemonics);
-            const path = `m/44'/501'/${currentIndex}'/0'`;
-            const derivedSeed = derivePath(path, seed.toString()).key;
-            const secret = nacl.sign.keyPair.fromSeed(derivedSeed).secretKey;
-            const keypair = Keypair.fromSecretKey(secret);
-            setCurrentIndex(currentIndex + 1);
-            let privateKeyEncoded = encodeBase58(secret);
-            let publicKeyEncoded = keypair.publicKey.toBase58();
-            setAddresses((prev) => [
-            ...prev, { publicKey: publicKeyEncoded, privateKey: privateKeyEncoded, visible: false }])
-        }}>
+            onClick={addWallet}>
             Add Solana wallet
         </button>
 
