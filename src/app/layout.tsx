@@ -27,10 +27,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100`}
+        className={` antialiased bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100`}
       >
         {children}
-        <div className="text-lg pl-20 py-5 border-t-gray-700 border-t-2">Designed and Developed by <Link href="https://bento.me/deevee" className="font-bold underline">Divyansh</Link></div>
+        <footer className="text-lg pl-20 py-5 border-t-gray-700 border-t-2">Designed and Developed by <Link href="https://bento.me/deevee" className="font-bold underline">Divyansh</Link></footer>
       </body>
     </html>
   );

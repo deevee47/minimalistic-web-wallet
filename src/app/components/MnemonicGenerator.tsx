@@ -1,28 +1,41 @@
 "use client";
-import { generateMnemonic } from "bip39";
+import { generateMnemonic, mnemonicToSeed } from "bip39";
 import React, { useEffect, useState } from "react";
 import copy from "clipboard-copy";
 import { toast, Toaster } from "sonner";
-import { mnemonicToSeed } from "bip39";
 import { Wallet, HDNodeWallet, encodeBase58 } from "ethers";
-import { Clipboard, Eye, EyeOff } from "lucide-react";
+import { Clipboard, Eye, EyeOff, Plus } from "lucide-react";
 import { derivePath } from "ed25519-hd-key";
 import { Keypair } from "@solana/web3.js";
-import nacl from "tweetnacl"
-
+import nacl from "tweetnacl";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+type WalletAddress = {
+    publicKey: string;
+    privateKey: string;
+    visible: boolean;
+};
+
+type WalletsState = {
+    solana: WalletAddress[];
+    ethereum: WalletAddress[];
+};
 
 const MnemonicGenerator = () => {
-    const [mnemonics, setMnemonics] = useState(" ");
+    const [mnemonics, setMnemonics] = useState<string>("");
     const [isCopied, setIsCopied] = useState(false);
-
-    const makeMnemonics = () => {
-        setMnemonics(generateMnemonic());
-    };
+    const [wallets, setWallets] = useState<WalletsState>({
+        solana: [],
+        ethereum: []
+    });
+    const [currentIndex, setCurrentIndex] = useState(0);
 
     useEffect(() => {
-        makeMnemonics();
+        if (typeof window !== 'undefined') {
+            setMnemonics(generateMnemonic());
+        }
     }, []);
 
     const handleCopyClick = async () => {
@@ -35,155 +48,120 @@ const MnemonicGenerator = () => {
         }
     };
 
+    const generateWallet = async (type: "solana" | "ethereum") => {
+        const seed = await mnemonicToSeed(mnemonics);
+        const path = type === "solana" ? `m/44'/501'/${currentIndex}'/0'` : `m/44'/60'/${currentIndex}'/0'`;
+        let walletInfo: WalletAddress;
+
+        if (type === "solana") {
+            const derivedSeed = derivePath(path, seed.toString()).key;
+            const secret = nacl.sign.keyPair.fromSeed(derivedSeed).secretKey;
+            const keypair = Keypair.fromSecretKey(secret);
+            walletInfo = {
+                publicKey: keypair.publicKey.toBase58(),
+                privateKey: encodeBase58(secret),
+                visible: false
+            };
+        } else {
+            const hdNode = HDNodeWallet.fromSeed(seed);
+            const child = hdNode.derivePath(path);
+            const wallet = new Wallet(child.privateKey);
+            walletInfo = {
+                publicKey: wallet.address,
+                privateKey: child.privateKey,
+                visible: false
+            };
+        }
+
+        setWallets((prevWallets) => ({
+            ...prevWallets,
+            [type]: [...prevWallets[type], walletInfo]
+        }));
+        setCurrentIndex(currentIndex + 1);
+    };
+
+    const togglePrivateKeyVisibility = (type: "solana" | "ethereum", index: number) => {
+        setWallets((prevWallets) => ({
+            ...prevWallets,
+            [type]: prevWallets[type].map((wallet, i) =>
+                i === index ? { ...wallet, visible: !wallet.visible } : wallet
+            )
+        }));
+    };
+
     return (
         <div className="flex flex-col items-center p-6">
-            <button
-                onClick={makeMnemonics}
-                className="mb-8 px-6 py-3 text-base font-medium bg-gray-700 border-2 border-transparent hover:bg-gray-800 hover:border-gray-700 hover:border-2 text-white rounded-md transition-all duration-200"
-            >
+            <Button className="py-4 px-8 mb-6" onClick={() => setMnemonics(generateMnemonic())}>
                 Generate Mnemonics
-            </button>
+            </Button>
             <Toaster position="top-right" />
-            {mnemonics !== " " && (
+            {mnemonics && (
                 <div
                     onClick={handleCopyClick}
                     className="bg-gray-800 p-4 rounded-md shadow-md grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-w-3xl w-full"
                 >
                     {mnemonics.split(" ").map((word, index) => (
-                        <p
+                        <Button
                             key={index}
                             className="px-2 py-3 bg-gray-800 border-2 border-gray-700 hover:bg-gray-700 text-center rounded text-sm font-medium text-gray-200"
                         >
                             {word}
-                        </p>
+                        </Button>
                     ))}
                     <div className="col-span-full flex items-center justify-center text-gray-400 text-sm">
                         <Clipboard className="mr-2" /> Click anywhere to copy!
                     </div>
                 </div>
             )}
-            <Tabs defaultValue="solana" className="">
-                <TabsList className="grid w-full grid-cols-2">
+            <Tabs defaultValue="solana" className="w-full">
+                <TabsList className="grid w-[50%] mx-auto my-4 grid-cols-2">
                     <TabsTrigger value="solana">Solana</TabsTrigger>
-                    <TabsTrigger value="eth">Ethereum</TabsTrigger>
+                    <TabsTrigger value="ethereum">Ethereum</TabsTrigger>
                 </TabsList>
-                <TabsContent value="solana">
-                <SolanaWallet mnemonics={mnemonics} />
-                </TabsContent>
-                <TabsContent value="eth">
-                     <EthWallet mnemonics={mnemonics} />
-                </TabsContent>
+                {["solana", "ethereum"].map((type) => (
+                    <TabsContent value={type} key={type}>
+                        <Card className="w-full">
+                            <CardHeader className="flex justify-between flex-row items-center">
+                                <CardTitle className="text-2xl">{type.charAt(0).toUpperCase() + type.slice(1)} Wallets</CardTitle>
+                                
+                                <Button variant="outline" className="mb-4 min-w-28 " onClick={() => generateWallet(type as "solana" | "ethereum")}>
+                                     <Plus /> Add wallet
+                                </Button>
+                            </CardHeader>
+                            <CardContent>
+                                {wallets[type as "solana" | "ethereum"].map((walletInfo, index) => (
+                                    <Card key={index} className="mb-4">
+                                        <CardHeader>
+                                            <div className="flex justify-between items-center">
+                                                <div className="">
+                                                    <div className="font-bold text-lg">
+                                                        Wallet Address
+                                                    </div>
+                                                    <div className="italic"> {walletInfo.publicKey} </div></div>
+
+                                                <Button
+                                                    variant="ghost"
+                                                    onClick={() => togglePrivateKeyVisibility(type as "solana" | "ethereum", index)}
+                                                >
+                                                    {walletInfo.visible ? <EyeOff /> : <Eye />}
+                                                </Button>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="font-bold text-lg">
+                                                Private Key
+                                            </div>
+                                            <div className="italic"> {walletInfo.visible ? walletInfo.privateKey : "Click the eye to reveal"} </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                ))}
             </Tabs>
         </div>
     );
 };
 
 export default MnemonicGenerator;
-
-
-
-type WalletAddress = {
-    publicKey: string,
-    privateKey: string,
-    visible: boolean
-}
-export function SolanaWallet({ mnemonics }: { mnemonics: string }) {
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [addresses, setAddresses] = useState<WalletAddress[]>([]);
-    const togglePrivateKeyVisibility = (index: number) => {
-        setAddresses((prevAddresses) =>
-            prevAddresses.map((addr, i) =>
-                i === index ? { ...addr, visible: !addr.visible } : addr
-            )
-        );
-    };
-
-    const addWallet = () => {
-        const seed = mnemonicToSeed(mnemonics);
-        const path = `m/44'/501'/${currentIndex}'/0'`;
-        const derivedSeed = derivePath(path, seed.toString()).key;
-        const secret = nacl.sign.keyPair.fromSeed(derivedSeed).secretKey;
-        const keypair = Keypair.fromSecretKey(secret);
-        setCurrentIndex(currentIndex + 1);
-        let privateKeyEncoded = encodeBase58(secret);
-        let publicKeyEncoded = keypair.publicKey.toBase58();
-        setAddresses((prev) => [
-            ...prev, { publicKey: publicKeyEncoded, privateKey: privateKeyEncoded, visible: false }])
-    }
-
-    return <div>
-        <button
-            className="mb-4 px-4 py-2 text-base font-medium bg-gray-700 border-2 border-transparent hover:bg-gray-800 hover:border-gray-700 text-white rounded-md transition-all duration-200"
-            onClick={addWallet}>
-            Add Solana wallet
-        </button>
-
-        {addresses.map((walletInfo, index) => (
-            <div key={index} className="bg-gray-800 p-4 rounded-md shadow-md mb-4">
-                <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-200">Wallet Address: {walletInfo.publicKey}</span>
-                    <button onClick={() => togglePrivateKeyVisibility(index)}>
-                        {walletInfo.visible ? <EyeOff /> : <Eye />}
-                    </button>
-                </div>
-                <div className="text-gray-200">
-                    Private Key: {walletInfo.visible ? walletInfo.privateKey : "* * * * * * * * "}
-                </div>
-            </div>
-        ))}
-        
-    </div>
-}
-
-export const EthWallet = ({ mnemonics }: { mnemonics: string }) => {
-    const [currentIndex, setCurrentIndex] = useState<number>(0);
-    const [addresses, setAddresses] = useState<WalletAddress[]>([]);
-
-    const togglePrivateKeyVisibility = (index: number) => {
-        setAddresses((prevAddresses) =>
-            prevAddresses.map((addr, i) =>
-                i === index ? { ...addr, visible: !addr.visible } : addr
-            )
-        );
-    };
-
-    const addWallet = async () => {
-        const seed = await mnemonicToSeed(mnemonics);
-        const derivationPath = `m/44'/60'/${currentIndex}'/0'`;
-        const hdNode = HDNodeWallet.fromSeed(seed);
-        const child = hdNode.derivePath(derivationPath);
-        const privateKey = child.privateKey;
-        const wallet = new Wallet(privateKey);
-
-        setAddresses((prev) => [
-            ...prev,
-            { publicKey: wallet.address, privateKey, visible: false },
-        ]);
-        setCurrentIndex(currentIndex + 1);
-    };
-
-    return (
-        <div className="mt-6">
-            <button
-                onClick={addWallet}
-                className="mb-4 px-4 py-2 text-base font-medium bg-gray-700 border-2 border-transparent hover:bg-gray-800 hover:border-gray-700 text-white rounded-md transition-all duration-200"
-            >
-                Add ETH Wallet
-            </button>
-
-            {addresses.map((walletInfo, index) => (
-                <div key={index} className="bg-gray-800 p-4 rounded-md shadow-md mb-4">
-                    <div className="flex justify-between items-center mb-2">
-                        <span className="text-gray-200">Wallet Address: {walletInfo.publicKey}</span>
-                        <button onClick={() => togglePrivateKeyVisibility(index)}>
-                            {walletInfo.visible ? <EyeOff /> : <Eye />}
-                        </button>
-                    </div>
-                    <div className="text-gray-200">
-                        Private Key: {walletInfo.visible ? walletInfo.privateKey : "* * * * * * * * "}
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-};
