@@ -1,10 +1,10 @@
-import Image from "next/image";
-import MnemonicGenerator from "./components/MnemonicGenerator";
+
+import WalletGenerator from "./components/WalletGenerator";
 
 export default function Home() {
   return (
     <div>
-      <MnemonicGenerator />
+      <WalletGenerator />
     </div>
   );
 }
