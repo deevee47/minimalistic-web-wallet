@@ -26,7 +26,7 @@ type WalletsState = {
 
 const MnemonicGenerator = () => {
     const [mnemonics, setMnemonics] = useState<string>("");
-    const [isCopied, setIsCopied] = useState(false);
+    const [, setIsCopied] = useState(false);
     const [wallets, setWallets] = useState<WalletsState>({
         solana: [],
         ethereum: []
