@@ -121,7 +121,7 @@ const MnemonicGenerator = () => {
     }
 
     return (
-        <div className="flex flex-col items-center p-6">
+        <div className="flex min-h-screen flex-col items-center p-6">
             <Button className="py-4 px-8 mb-6" onClick={() => setMnemonics(generateMnemonic())}>
                 Generate Mnemonics
             </Button>

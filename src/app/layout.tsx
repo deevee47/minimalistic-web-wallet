@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Link from "next/link";
+import Navbar from "./components/Navbar";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -17,6 +18,7 @@ export default function RootLayout({
       <body
         className={` antialiased bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-gray-100`}
       >
+        <Navbar />
         {children}
         <footer className="text-lg pl-20 py-5 border-t-gray-700 border-t-2">Designed and Developed by <Link href="https://bento.me/deevee" className="font-bold underline">Divyansh</Link></footer>
       </body>
