@@ -10,13 +10,13 @@ const Navbar = () => {
                     <div className="flex items-center justify-between h-16">
                         {/* Logo and Brand */}
                         <div className="flex items-center space-x-3">
-                            <Wallet className="w-8 h-8 text-blue-500" />
+                            <Wallet className="w-8 h-8 text-cyan-400" />
                             <div className="flex flex-col">
-                                <span className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
-                                    VaultVerse
+                                <span className="text-xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
+                                    COIN STASH
                                 </span>
-                                <span className="text-xs text-gray-500">
-                                    Secure Wallet Generation
+                                <span className="text-xs text-cyan-300">
+                                    Secure Web Wallet 
                                 </span>
                             </div>
                         </div>
@@ -26,7 +26,7 @@ const Navbar = () => {
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="rounded-full hover:bg-white/20"
+                                className="rounded-full hover:bg-cyan-800/20 text-cyan-400 hover:text-cyan-200"
                             >
                                 <Settings className="h-5 w-5" />
                             </Button>
@@ -38,7 +38,7 @@ const Navbar = () => {
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="rounded-full hover:bg-white/20"
+                                    className="rounded-full hover:bg-cyan-800/20 text-cyan-400 hover:text-cyan-200"
                                 >
                                     <Github className="h-5 w-5" />
                                 </Button>

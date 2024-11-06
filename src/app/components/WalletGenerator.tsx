@@ -4,14 +4,15 @@ import React, { useEffect, useState } from "react";
 import copy from "clipboard-copy";
 import { toast, Toaster } from "sonner";
 import { Wallet, HDNodeWallet, encodeBase58 } from "ethers";
-import { Clipboard, Eye, EyeOff, Plus } from "lucide-react";
+import { Clipboard, Eye, EyeOff, Plus, RefreshCw, Wallet2 } from "lucide-react";
 import { derivePath } from "ed25519-hd-key";
 import { Keypair } from "@solana/web3.js";
 import nacl from "tweetnacl";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import axios from "axios"
+import axios from "axios";
+
 type WalletAddress = {
     publicKey: string;
     privateKey: string;
@@ -32,6 +33,7 @@ const MnemonicGenerator = () => {
         ethereum: []
     });
     const [currentIndex, setCurrentIndex] = useState(0);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -42,13 +44,24 @@ const MnemonicGenerator = () => {
     const handleCopyClick = async () => {
         try {
             await copy(mnemonics);
-            toast.success("All Mnemonics Copied to Clipboard!");
+            toast.success("Mnemonics copied!", {
+                className: "bg-slate-900 text-cyan-400 border border-cyan-700"
+            });
             setIsCopied(true);
         } catch (error) {
             console.error("Failed to copy text to clipboard", error);
         }
     };
 
+    const generateNewMnemonic = () => {
+        setIsGenerating(true);
+        setTimeout(() => {
+            setMnemonics(generateMnemonic());
+            setIsGenerating(false);
+        }, 500);
+    };
+
+    // ... (keeping the wallet generation and balance fetching functions the same)
     const generateWallet = async (type: "solana" | "ethereum") => {
         const seed = await mnemonicToSeed(mnemonics);
         const path = type === "solana" ? `m/44'/501'/${currentIndex}'/0'` : `m/44'/60'/${currentIndex}'/0'`;
@@ -92,7 +105,7 @@ const MnemonicGenerator = () => {
         }));
     };
 
-    const fetchBalance = async (publicKey: string, type : "solana" | "ethereum", index : number) => {
+    const fetchBalance = async (publicKey: string, type: "solana" | "ethereum", index: number) => {
         const formData = type === "ethereum" ? {
             "jsonrpc": "2.0",
             "id": 1,
@@ -121,80 +134,134 @@ const MnemonicGenerator = () => {
     }
 
     return (
-        <div className="flex min-h-screen flex-col items-center p-6">
-            <Button className="py-4 px-8 mb-6" onClick={() => setMnemonics(generateMnemonic())}>
-                Generate Mnemonics
-            </Button>
-            <Toaster position="top-right" />
-            {mnemonics && (
-                <div
-                    onClick={handleCopyClick}
-                    className="bg-gray-800 p-4 rounded-md shadow-md grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-w-3xl w-full"
-                >
-                    {mnemonics.split(" ").map((word, index) => (
-                        <Button
-                            key={index}
-                            className="px-2 py-3 bg-gray-800 border-2 border-gray-700 hover:bg-gray-700 text-center rounded text-sm font-medium text-gray-200"
-                        >
-                            {word}
-                        </Button>
-                    ))}
-                    <div className="col-span-full flex items-center justify-center text-gray-400 text-sm">
-                        <Clipboard className="mr-2" /> Click anywhere to copy!
-                    </div>
+        <div className="min-h-screen bg-slate-950 text-cyan-50 p-4 md:p-8">
+            <div className="max-w-7xl mx-auto">
+                {/* Header Section */}
+                <div className="text-center mb-12">
+                    <h1 className="text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 mb-4">
+                        COIN STASH
+                    </h1>
+                    <h1 className="text-md font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 mb-4">
+                        Your Go To Web Wallet
+                    </h1>
+                    <Button
+                        onClick={generateNewMnemonic}
+                        className="bg-cyan-950 hover:bg-cyan-900 text-cyan-400 border border-cyan-700 hover:border-cyan-500 transition-all duration-300 group"
+                    >
+                        <RefreshCw className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''} group-hover:rotate-180 transition-transform duration-500`} />
+                        Generate New Seed
+                    </Button>
                 </div>
-            )}
-            <Tabs defaultValue="solana" className="w-full">
-                <TabsList className="grid w-[50%] mx-auto my-4 grid-cols-2">
-                    <TabsTrigger value="solana">Solana</TabsTrigger>
-                    <TabsTrigger value="ethereum">Ethereum</TabsTrigger>
-                </TabsList>
-                {["solana", "ethereum"].map((type) => (
-                    <TabsContent value={type} key={type}>
-                        <Card className="w-full">
-                            <CardHeader className="flex justify-between flex-row items-center">
-                                <CardTitle className="text-2xl">{type.charAt(0).toUpperCase() + type.slice(1)} Wallets</CardTitle>
-                                
-                                <Button variant="outline" className="mb-4 min-w-28 " onClick={() => generateWallet(type as "solana" | "ethereum")}>
-                                     <Plus /> Add wallet
-                                </Button>
-                            </CardHeader>
-                            <CardContent>
-                                {wallets[type as "solana" | "ethereum"].map((walletInfo, index) => (
-                                    <Card key={index} className="mb-4">
-                                        <CardHeader>
-                                            <div className="flex justify-between items-center">
-                                                <div className="">
-                                                    <div className="font-bold text-lg">
-                                                        Wallet Address
-                                                    </div>
-                                                    <div className="italic"> {walletInfo.publicKey} </div></div>
-                                                
-                                                <Button
-                                                    variant="outline"
-                                                    onClick={() => fetchBalance(walletInfo.publicKey, type as "solana" | "ethereum", index)}
-                                                > {walletInfo.balance} </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    onClick={() => togglePrivateKeyVisibility(type as "solana" | "ethereum", index)}
-                                                >
-                                                    {walletInfo.visible ? <EyeOff /> : <Eye />}
-                                                </Button>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="font-bold text-lg">
-                                                Private Key
-                                            </div>
-                                            <div className="italic"> {walletInfo.visible ? walletInfo.privateKey : "Click the eye to reveal"} </div>
-                                        </CardContent>
-                                    </Card>
+
+                {/* Mnemonic Display */}
+                {mnemonics && (
+                    <div className="mb-12">
+                        <div
+                            onClick={handleCopyClick}
+                            className="bg-slate-900 rounded-xl border border-cyan-900 hover:border-cyan-700 transition-all duration-300 p-6 cursor-pointer relative overflow-hidden group"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                {mnemonics.split(" ").map((word, index) => (
+                                    <div
+                                        key={index}
+                                        className="bg-slate-800 px-4 py-2 rounded-lg text-center font-mono text-sm text-cyan-400 border border-cyan-900/50"
+                                    >
+                                        {word}
+                                    </div>
                                 ))}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                ))}
-            </Tabs>
+                            </div>
+                            <div className="mt-4 flex items-center justify-center text-cyan-500 text-sm">
+                                <Clipboard className="mr-2 w-4 h-4" /> Click to copy seed phrase
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Wallet Section */}
+                <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-purple-500/5 rounded-2xl" />
+                    <Tabs defaultValue="solana" className="relative">
+                        <TabsList className="w-full max-w-xs mx-auto mb-8 bg-slate-900 p-1 rounded-lg border border-cyan-900">
+                            <TabsTrigger
+                                value="solana"
+                                className="w-1/2 data-[state=active]:bg-cyan-950 data-[state=active]:text-cyan-400 rounded-md transition-all duration-300"
+                            >
+                                Solana
+                            </TabsTrigger>
+                            <TabsTrigger
+                                value="ethereum"
+                                className="w-1/2 data-[state=active]:bg-cyan-950 data-[state=active]:text-cyan-400 rounded-md transition-all duration-300"
+                            >
+                                Ethereum
+                            </TabsTrigger>
+                        </TabsList>
+
+                        {["solana", "ethereum"].map((type) => (
+                            <TabsContent value={type} key={type}>
+                                <Card className="bg-slate-900 border-cyan-900">
+                                    <CardHeader className="flex flex-row items-center justify-between border-b border-cyan-900/30">
+                                        <CardTitle className="text-xl text-cyan-400 flex items-center">
+                                            <Wallet2 className="mr-2" />
+                                            {type.charAt(0).toUpperCase() + type.slice(1)} Wallets
+                                        </CardTitle>
+                                        <Button
+                                            onClick={() => generateWallet(type as "solana" | "ethereum")}
+                                            className="bg-cyan-950 hover:bg-cyan-900 text-cyan-400 border border-cyan-700 hover:border-cyan-500"
+                                        >
+                                            <Plus className="mr-2 w-4 h-4" /> New Wallet
+                                        </Button>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4 mt-4">
+                                        {wallets[type as "solana" | "ethereum"].map((walletInfo, index) => (
+                                            <div
+                                                key={index}
+                                                className="bg-slate-950 rounded-lg border border-cyan-900 hover:border-cyan-700 transition-all duration-300 p-4 group"
+                                            >
+                                                <div className="space-y-4">
+                                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="text-cyan-500 text-xs mb-1">Public Address</div>
+                                                            <div className="font-mono text-sm break-all text-cyan-100">
+                                                                {walletInfo.publicKey}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <Button
+                                                                onClick={() => fetchBalance(walletInfo.publicKey, type as "solana" | "ethereum", index)}
+                                                                className="bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-cyan-900 hover:border-cyan-700"
+                                                            >
+                                                                {walletInfo.balance}
+                                                            </Button>
+                                                            <Button
+                                                                onClick={() => togglePrivateKeyVisibility(type as "solana" | "ethereum", index)}
+                                                                className="bg-slate-900 hover:bg-slate-800 text-cyan-400 border border-cyan-900 hover:border-cyan-700"
+                                                            >
+                                                                {walletInfo.visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-cyan-500 text-xs mb-1">Private Key</div>
+                                                        <div className="font-mono text-sm break-all text-cyan-100">
+                                                            {walletInfo.visible ? (
+                                                                walletInfo.privateKey
+                                                            ) : (
+                                                                <span className="text-slate-500">Click the eye icon to reveal</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+                        ))}
+                    </Tabs>
+                </div>
+            </div>
+            <Toaster position="top-right" />
         </div>
     );
 };

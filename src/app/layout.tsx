@@ -20,7 +20,15 @@ export default function RootLayout({
       >
         <Navbar />
         {children}
-        <footer className="text-lg pl-20 py-5 border-t-gray-700 border-t-2">Designed and Developed by <Link href="https://bento.me/deevee" className="font-bold underline">Divyansh</Link></footer>
+        <footer className="text-lg pl-20 py-5 border-t-2 border-cyan-900">
+          Designed and Developed by{" "}
+          <Link
+            href="https://bento.me/deevee"
+            className="font-bold underline text-cyan-400 hover:text-purple-500"
+          >
+            Divyansh
+          </Link>
+        </footer>
       </body>
     </html>
   );
